@@ -1,0 +1,134 @@
+version: '3.4'
+
+services:
+  consul:
+    image: hashicorp/consul
+    ports:
+      - 8500:8500
+    command: agent -server -bind 0.0.0.0 -client 0.0.0.0 -bootstrap-expect 1 -config-file=/consul/config/config.json
+    volumes:
+      - ./consul-config.json:/consul/config/config.json
+        
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      start_period: 5s
+      timeout: 3s
+      retries: 30
+
+       
+  ############################
+  # Dapr placement service
+  ############################
+  placement:
+    image: "daprio/dapr:latest"
+    command: ["./placement", "-port", "6050", "-log-level", "debug"]
+    ports:
+      - "6050:6050"
+
+  ########################################
+  # pub service and dapr sidecar 
+  ########################################
+  pub:
+    build: 
+      context: src
+      dockerfile: ../pub.Dockerfile
+    image: example/pub
+    platform: linux/amd64
+    depends_on:
+      - consul
+      - redis
+      - placement
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:50340
+      - DAPR_HTTP_PORT=33040
+      - DAPR_GRPC_PORT=32040
+      - APP_API_TOKEN=pub_app_api_token
+    ports:
+      - "50340:50340"
+      - "50240:50240"
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
+   
+  pub-dapr:
+    image: "daprio/daprd:latest"
+    platform: linux/amd64
+    environment:
+      - APP_API_TOKEN=pub_app_api_token
+    command: [ "./daprd", 
+      "-app-id", "pub", 
+      "-app-port", "50340", 
+      "-log-level", "debug", 
+      "-dapr-http-port", "33040",
+      "-dapr-grpc-port", "32040",
+      "-dapr-internal-grpc-port", "50240",
+      "-dapr-http-max-request-size", "16",
+      "-placement-host-address", "kubernetes.docker.internal:6050",
+      "-components-path", "/components",
+      "-config", "/configuration/dapr-config.yaml"
+    ]
+    depends_on:
+      - pub
+    network_mode: "service:pub"
+    volumes:
+      - "./dapr/components/:/components"
+      - "./dapr/configuration/:/configuration" 
+
+  ########################################
+  # sub service and dapr sidecar 
+  ########################################
+  sub:
+    build: 
+      context: src
+      dockerfile: ../sub.Dockerfile
+    image: example/sub
+    platform: linux/amd64
+    depends_on:
+      - consul
+      - redis
+      - placement
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:50341
+      - DAPR_HTTP_PORT=33041
+      - DAPR_GRPC_PORT=32041
+      - APP_API_TOKEN=sub_app_api_token
+    ports:
+      - "50341:50341"
+      - "50241:50241"
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
+    
+  sub-dapr:
+    image: "daprio/daprd:latest"
+    platform: linux/amd64
+    environment:
+      - APP_API_TOKEN=sub_app_api_token
+    command: [ "./daprd", 
+      "-app-id", "sub", 
+      "-app-port", "50341",
+      "-log-level", "debug", 
+      "-dapr-http-port", "33041",
+      "-dapr-grpc-port", "32041",
+      "-dapr-internal-grpc-port", "50241",
+      "-dapr-http-max-request-size", "16",
+      "-placement-host-address", "kubernetes.docker.internal:6050",
+      "-components-path", "/components",
+      "-config", "/configuration/dapr-config.yaml"
+    ]
+    depends_on:
+      - sub
+    network_mode: "service:sub"
+    volumes:
+      - "./dapr/components/:/components"
+      - "./dapr/configuration/:/configuration"
+
+  
+
+  

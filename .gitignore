@@ -1,0 +1,9 @@
+*.suo
+*.user
+.vs/
+bin
+obj
+packages
+deploy/mongo/*/
+deploy/k8s/.port_env
+.DS_Store

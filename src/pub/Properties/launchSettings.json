@@ -1,0 +1,37 @@
+{
+  "profiles": {
+    "pub": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://+:50340",
+        "DAPR_HTTP_PORT": "33040",
+        "DAPR_GRPC_PORT": "32040",
+        "APP_API_TOKEN": "myToken"
+      },
+      "dotnetRunMessages": "true",
+      "applicationUrl": "http://localhost:50340"
+    },
+    "pub.DaprMac": {
+      "commandName": "Executable",
+      "executablePath": "/usr/local/bin/dapr",
+      "workingDirectory": "$(SolutionDir)",
+      "commandLineArgs": "run --app-id pub --app-port 50340 --dapr-http-port 33040 --dapr-grpc-port 32040 --dapr-http-max-request-size 16 --log-level debug --enable-api-logging --placement-host-address kubernetes.docker.internal:6050 --config ./dapr/configuration/dapr-config.yaml --resources-path ./dapr/components",
+      "environmentVariables": {
+        "token": "myToken",
+        "APP_API_TOKEN": "myToken"
+      }
+    },
+    "pub.DaprWin": {
+      "commandName": "Executable",
+      "executablePath": "c:\\dapr\\dapr.exe",
+      "workingDirectory": "$(SolutionDir)",
+      "commandLineArgs": "run --app-id pub --app-port 50340 --dapr-http-port 33040 --dapr-grpc-port 32040 --dapr-http-max-request-size 16 --enable-api-logging --placement-host-address kubernetes.docker.internal:6050 --log-level debug --config .\\dapr\\configuration\\dapr-config.yaml --resources-path .\\dapr\\components",
+      "environmentVariables": {
+        "token": "myToken",
+        "APP_API_TOKEN": "myToken"
+      }
+    }
+  }
+}
